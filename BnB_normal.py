@@ -38,23 +38,25 @@ def relax_problem (y, A, S0, S1, S, alpha = 1, M = 1000000):
 
 
 
-
-
-
 class Node:
     
-    def __init__(self, n, S0, S1, S):
+    def __init__(self, n, S0, S1, S, A, y, alpha, M):
         self.level = n - len(S)
         self.S0 = S0
         self.S1 = S1
         self.S = S
         self.pvl = 0
         self.pu = None       #corresponds to obj func value in real problem with x
-        self.x = None        
+        self.x = None    
+        
+        self.A = A
+        self.y = y
+        self.alpha = alpha
+        self.M = M    
     
-    def calculate_obj (self, y, A, alpha0, M0):
-        self.pvl, self.x = relax_problem(y, A, S0 = self.S0, S1 = self.S1, S = self.S, alpha = alpha0, M = M0)
-        self.pu =  evaluation_main(y, A, self.x, alpha0)
+    def calculate_obj (self):
+        self.pvl, self.x = relax_problem(self.y, self.A, S0 = self.S0, S1 = self.S1, S = self.S, alpha = self.alpha, M = self.M)
+        self.pu =  evaluation_main(self.y, self.A, self.x, self.alpha)
         
     def __le__ (self, other) -> bool:
         return self.pvl <= other.pvl
@@ -91,13 +93,9 @@ class BnBNormalAlgorythm:
         self.node_counter = 0
         self.verbose = None
         
-        
 
     def create_node(self, S0, S1, S):
-        return Node(self.n, S0, S1, S)
-    
-    def calculate_values(self, u):
-        u.calculate_obj(y, A, self.alpha, self.M)
+        return Node(self.n, S0, S1, S, self.A, self.y, self.alpha, self.M)
         
     def show(self, *l, **k):
         if self.verbose:
@@ -110,9 +108,7 @@ class BnBNormalAlgorythm:
         return S, S1, S0
     
     
-    
-    
-    
+
     
     def check_bound(self, u, v):
         """
@@ -122,8 +118,7 @@ class BnBNormalAlgorythm:
             return v.pu, v
         else:
             return u.pu, u
-    
-    
+
     
 
 
@@ -143,15 +138,15 @@ class BnBNormalAlgorythm:
         u = self.create_node(S0, S1, S)
         q.put(u)
 
-        #optimum
-        self.calculate_values(u)
+        #Init. Choosing a possible first optimum
+        u.calculate_obj()
         pv_opt = u.pu
         node_opt = deepcopy(u)
         self.show("First op:", pv_opt)
         
         
         def checking_node (name, v, pv_opt1, node_opt1):
-            self.calculate_values(v)
+            v.calculate_obj()
             self.show(f"{name} pvl:", v.pvl)
             if not pv_opt1<= v.pvl:
                 q.put(v)
@@ -175,7 +170,7 @@ class BnBNormalAlgorythm:
             
             
             u = q.get()
-            self.calculate_values(u)
+            u.calculate_obj()
             self.show(f"u node: S0: {u.S0} | S1: {u.S1} | Pvl: {u.pvl}\n")
             
             #if the node is leaf
@@ -226,7 +221,7 @@ class BnBNormalAlgorythm:
 
 if __name__ == "__main__":
     np.random.seed(420)
-    n = 15
+    n = 12
     A = np.random.randint(-10, 10, (n, n))
     y = np.random.randint(-10, 10, (n, 1))
     
@@ -235,7 +230,7 @@ if __name__ == "__main__":
     
     solver = BnBNormalAlgorythm(y, A, alpha = lambda_0, M = M0)  
     
-    pv, node, num_nodes = solver.solve(verbose=True)
+    pv, node, num_nodes = solver.solve(verbose=False)
     
     print("Solution Node")
     print(f"Nodes visited {num_nodes}/{2**(n) + 1}") #remember to count node 0
