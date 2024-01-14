@@ -57,6 +57,7 @@ class Node:
         self.upper_lambda = None
         self.lower_lambda = None
 
+
     def calculate_obj(self,):
         self.pvl, self.x = relax_problem(
             self.y, self.A, S0=self.S0, S1=self.S1, S=self.S, lambda0=self.lambda0, M=self.M)
@@ -168,7 +169,6 @@ class BnBNormalAlgorythm:
         self.solving_time = None
         self.node_counter = 0
         self.verbose = None
-
         self.lower_lambda = -np.inf
         self.upper_lambda = np.inf
 
@@ -194,6 +194,7 @@ class BnBNormalAlgorythm:
         else:
             return u.pu, u
 
+
     def solve(self, verbose=True):
         self.verbose = verbose
 
@@ -210,13 +211,16 @@ class BnBNormalAlgorythm:
         u = self.create_node(S0, S1, S)
         q.put(u)
 
+
         # optimum
         u.calculate_obj()
         pv_opt = u.pu
         node_opt = deepcopy(u)
         self.show("First op:", pv_opt)
 
+
         def checking_node(name, v, pv_opt1, node_opt1):
+
             v.calculate_obj()
             self.show(f"{name} pvl:", v.pvl)
             if not pv_opt1 <= v.pvl:
@@ -243,6 +247,7 @@ class BnBNormalAlgorythm:
                 self.upper_lambda = u.upper_lambda
             if (u.lower_lambda > self.lower_lambda):
                 self.lower_lambda = u.lower_lambda
+
 
             self.show(f"u node: S0: {u.S0} | S1: {u.S1} | Pvl: {u.pvl}\n")
 
@@ -284,7 +289,7 @@ class BnBNormalAlgorythm:
 
 if __name__ == "__main__":
     np.random.seed(420)
-    n = 15
+    n = 12
     A = np.random.randint(-10, 10, (n, n))
     y = np.random.randint(-10, 10, (n, 1))
 
