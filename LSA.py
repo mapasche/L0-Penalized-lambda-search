@@ -24,7 +24,7 @@ class LeastSquareAlgo :
             
     def __str__(self):
         #Shows the result
-        text = f"Solution LSA: {self.x.T}T"
+        text = f"Solution Least Square Algorithm: {self.x.T}T"
         return text
             
             
