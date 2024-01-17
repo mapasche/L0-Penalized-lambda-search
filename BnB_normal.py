@@ -3,13 +3,15 @@ import cvxpy as cp
 from queue import Queue
 from copy import deepcopy
 import time
+import pandas as pd
 
 
 verbose_relax = False
 
 
 def evaluation_main(y, A, x, lambda0=1):
-    value = 0.5 * np.linalg.norm(y - A @ x) ** 2 + \
+    n = y.shape[0]
+    value = 0.5 * np.linalg.norm(y - A @ x) ** 2 / n + \
         lambda0 * np.count_nonzero(x)
     return value
 
@@ -18,7 +20,7 @@ def relax_problem(y, A, S0, S1, S, lambda0=1, M=1000000):
 
     n = y.shape[0]
     X = cp.Variable((n, 1))
-    obj = 0.5 * cp.sum_squares(y - A @ X)
+    obj = 0.5 * cp.sum_squares(y - A @ X) / n
     obj += lambda0 / M * cp.norm(X[S], 1)
     obj += lambda0 * len(S1)
 
@@ -290,12 +292,14 @@ class BnBNormalAlgorythm:
 
             u = q.get()
             u.calculate_obj()
-            u.get_lambda_interval()
+            
+            
+            # u.get_lambda_interval()
 
-            if (u.upper_lambda < self.upper_lambda):
+            """ if (u.upper_lambda < self.upper_lambda):
                 self.upper_lambda = u.upper_lambda
             if (u.lower_lambda > self.lower_lambda):
-                self.lower_lambda = u.lower_lambda
+                self.lower_lambda = u.lower_lambda """
 
 
             self.show(f"u node: S0: {u.S0} | S1: {u.S1} | Pvl: {u.pvl}\n")
@@ -337,15 +341,21 @@ class BnBNormalAlgorythm:
 
 
 if __name__ == "__main__":
-    np.random.seed(420)
-    n = 12
+    np.random.seed(42)
+    n = 14
     A = np.random.randint(-10, 10, (n, n))
     y = np.random.randint(-10, 10, (n, 1))
+    
+    df_A = pd.DataFrame(A)
+    df_A.to_csv('matrix.csv', index=False, header=False)
+    df_y = pd.DataFrame(y)
+    df_y.to_csv('y.csv', index=False, header=False)    
+
 
     lambda_0 = 0.5
     M0 = 100
 
-    """ solver = BnBNormalAlgorythm(y, A, lambda0=lambda_0, M=M0)
+    solver = BnBNormalAlgorythm(y, A, lambda0=lambda_0, M=M0)
 
     pv, node, num_nodes = solver.solve(verbose=False)
 
@@ -353,13 +363,15 @@ if __name__ == "__main__":
     # remember to count node 0
     print(f"Nodes visited {num_nodes}/{2**(n) + 1}")
     print(node)
+    
+    print(node.x)
 
-    print("Getting lambda intervals")
-    print(solver.lower_lambda, solver.upper_lambda)
- """
-    S = list(range(n))
+    #print("Getting lambda intervals")
+    #print(solver.lower_lambda, solver.upper_lambda)
+
+    """ S = list(range(n))
     S0 = []
     S1 = []
     node = Node(n, S0, S1, S, A, y, lambda_0, M0)
     node.calculate_obj()
-    node.get_lambda_interval()
+    node.get_lambda_interval() """
