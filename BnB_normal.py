@@ -1,207 +1,11 @@
 import numpy as np
-import cvxpy as cp
 from queue import Queue
 from copy import deepcopy
 import time
 import pandas as pd
+import os
 
-
-verbose_relax = False
-
-
-def evaluation_main(y, A, x, lambda0=1):
-    n = y.shape[0]
-    value = 0.5 * np.linalg.norm(y - A @ x) ** 2 / n + \
-        lambda0 * np.count_nonzero(x)
-    return value
-
-
-def relax_problem(y, A, S0, S1, S, lambda0=1, M=1000000):
-
-    n = y.shape[0]
-    X = cp.Variable((n, 1))
-    obj = 0.5 * cp.sum_squares(y - A @ X) / n
-    obj += lambda0 / M * cp.norm(X[S], 1)
-    obj += lambda0 * len(S1)
-
-    if len(S0) == 0:
-        constraint = [X <= M, -X <= M]
-    else:
-        constraint = [X[S0] == 0, X <= M, -X <= M]
-
-    prob = cp.Problem(cp.Minimize(obj), constraint)
-    result = prob.solve(verbose=verbose_relax,
-                        solver=cp.ECOS, abstol=1e-4, reltol=1e-4)
-    # eliminate 0
-    x_vector = X.value
-    x_vector = np.where(abs(x_vector) < 1e-7, 0, x_vector)
-    return result, x_vector
-
-
-class Node:
-
-    def __init__(self, n, S0, S1, S, A, y, lambda0, M):
-        self.A = A
-        self.y = y
-        self.level = n - len(S)
-        self.S0 = S0
-        self.S1 = S1
-        self.S = S
-        self.lambda0 = lambda0
-        self.M = M
-        self.n = n
-
-        self.u = None
-        self.omega = None
-        self.pvl = 0
-        self.pu = None  # corresponds to obj func value in real problem with x
-        self.x = None
-
-        self.upper_lambda = None
-        self.lower_lambda = None
-
-
-    def calculate_obj(self,):
-        self.pvl, self.x = relax_problem(
-            self.y, self.A, S0=self.S0, S1=self.S1, S=self.S, lambda0=self.lambda0, M=self.M)
-        self.pu = evaluation_main(self.y, self.A, self.x, self.lambda0)
-        self.u = self.y - self.A@self.x
-        
-
-    def get_lambda_interval(self):
-        self.omega = 0.5 * np.linalg.norm(self.y - self.A @ self.x)**2 - \
-            0.5 * np.linalg.norm(self.y)**2 +  \
-            0.5 * np.linalg.norm(self.y-self.u)**2
-            
-        for i in self.S1:
-            self.omega += self.M*abs(self.A[:, i] @ self.u)
-
-        class Au:
-            def __init__(self, value, index):
-                self.value = float(value)
-                self.index = index
-            def __str__(self):
-                return str("val : " + str(round(self.value, 4)) + ", idx : "+str(self.index))
-            def __repr__(self):
-                return str(self)
-
-        # decreasing
-        test = sorted([Au(self.M*abs(self.A[:, i] @ self.u), i)
-                       for i in self.S], reverse=True, key=lambda x: x.value)
-
-        
-
-        def calc_bound(j):
-            constant1 = self.omega + \
-                np.sum([test[i].value for i in range(j + 1)])
-            constant2 = len(self.S1)-np.count_nonzero(self.x)+j+1
-            
-            if constant2 != 0:
-
-                if not 0 <= constant2:
-                    # negative
-                    possible_lower_bound = constant1 / constant2
-                    possible_upper_bound = np.inf
-                else:
-                    # positive
-                    possible_upper_bound = constant1 / constant2
-                    possible_lower_bound = -np.inf
-                return (possible_lower_bound, possible_upper_bound)
-            
-            else:
-                #when constant2 is zero we cannot check the condition
-                return (-np.inf, np.inf)
-            
-        
-
-        
-        #find j0. argmax M|ai^T u|
-        j0 = -1
-        for i in range(len(test)):
-            if (test[i].value >= self.lambda0):
-                j0 = i
-                
-        print("omega:", self.omega)
-        print("J0:", j0)
-        print("First interval",
-              "[", test[j0 + 1].value, ",", test[j0].value, "]")
-        
-        lower_bound = -np.inf
-        upper_bound = np.inf
-        #searches for the smaller bound
-        for j in range(j0, len(test)):
-            print("J:", j)
-            if j == len(self.S) - 1:
-                print("[", -np.inf, ",", test[j].value, "]")
-            else:
-                print("[", test[j + 1].value, ",", test[j].value, "]")
-            
-            possible_lower_bound, possible_upper_bound = calc_bound(j)
-            #print("lower:", possible_lower_bound, "upper:", possible_upper_bound)
-            if possible_lower_bound == -np.inf:
-                if possible_upper_bound < test[j].value:
-                    upper_bound = min(upper_bound, possible_upper_bound)
-            
-            if possible_upper_bound == np.inf:
-                if possible_lower_bound > test[j].value:
-                    lower_bound = max(lower_bound, possible_lower_bound)
-        
-        
-        #now the other set of intervals
-        for j in range(j0, -1, -1):
-            print("J:", j)
-            if j == 0:
-                print("[", test[j].value, ",", np.inf, "]")
-            else:
-                print("[", test[j + 1].value, ",", test[j].value, "]")
-            
-            possible_lower_bound, possible_upper_bound = calc_bound(j)
-            print("lower:", possible_lower_bound, "upper:", possible_upper_bound)
-            if possible_lower_bound == -np.inf:
-                if possible_upper_bound < test[j].value:
-                    upper_bound = min(upper_bound, possible_upper_bound)
-            
-            if possible_upper_bound == np.inf:
-                if possible_lower_bound > test[j].value:
-                    lower_bound = max(lower_bound, possible_lower_bound)
-
-            
-                    
-        
-        print("[", lower_bound, ",", upper_bound, "]")
-
-        """ test.append(Au(-np.inf, j0+1)) #why?
-        while (j0 >= 0 and (possible_upper_bound >= test[j0].value or possible_lower_bound <= test[j0+1].value)):
-            j0 -= 1
-            possible_lower_bound, possible_upper_bound = calc_bound(j0)
-
-        self.upper_lambda = possible_upper_bound
-        self.lower_lambda = possible_lower_bound """
-        #print(self.lower_lambda, self.upper_lambda)
-
-        # if not 0 <= constant2:
-        #     # negative
-        #     possible_lower_bound = constant1 / constant2
-        #     print(possible_lower_bound)
-
-        #     while (possible_lower_bound >= test[j0].value or possible_lower_bound <= test[j0+1].value):
-        #         j0 -= 1
-        #         constant1, constant2 = calc_bound(j0)
-
-        # else:
-        #     # positive
-        #     possible_upper_bound = constant1 / constant2
-
-    def __le__(self, other) -> bool:
-        return self.pvl <= other.pvl
-
-    def __str__(self) -> str:
-        text = f"S0: {self.S0} | S1: {self.S1} | S: {self.S}\nPvl: {self.pvl}\n"
-        return text
-
-    def __repr__(self) -> str:
-        text = f"S0: {self.S0} | S1: {self.S1} | Pvl: {self.pvl}"
-        return text
+from node import Node
 
 
 class BnBNormalAlgorythm:
@@ -347,12 +151,12 @@ if __name__ == "__main__":
     y = np.random.randint(-10, 10, (n, 1))
     
     df_A = pd.DataFrame(A)
-    df_A.to_csv('matrix.csv', index=False, header=False)
+    df_A.to_csv(os.path.join('files', 'matrix.csv'), index=False, header=False)
     df_y = pd.DataFrame(y)
-    df_y.to_csv('y.csv', index=False, header=False)    
+    df_y.to_csv(os.path.join('files', 'y.csv'), index=False, header=False)    
 
 
-    lambda_0 = 0.5
+    lambda_0 = 1
     M0 = 100
 
     solver = BnBNormalAlgorythm(y, A, lambda0=lambda_0, M=M0)
