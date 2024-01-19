@@ -7,9 +7,9 @@ Random.seed!(42)
 
 println(pwd())
 #Data generation
-matrix = CSV.File("parsimonious/matrix.csv", header=false) |> DataFrame
+matrix = CSV.File("parsimonious/files/matrix.csv", header=false) |> DataFrame
 A = Matrix(matrix)
-df_y = CSV.File("parsimonious/y.csv", header=false) |> DataFrame
+df_y = CSV.File("parsimonious/files/y.csv", header=false) |> DataFrame
 y = Vector(df_y[:, 1])
 #y = randn(10)
 

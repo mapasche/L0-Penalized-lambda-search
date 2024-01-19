@@ -28,3 +28,5 @@ def relax_problem(y, A, S0, S1, S, lambda0=1, M=1000000, verbose = False):
     x_vector = X.value
     x_vector = np.where(abs(x_vector) < 1e-7, 0, x_vector)
     return result, x_vector
+
+
