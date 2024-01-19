@@ -24,6 +24,7 @@ class BnBNormalAlgorythm:
         self.solving_time = None
         self.node_counter = 0
         self.verbose = None
+        self.nodes_visited = []
         self.lower_lambda = -np.inf
         self.upper_lambda = np.inf
 
@@ -96,16 +97,8 @@ class BnBNormalAlgorythm:
 
             u = q.get()
             u.calculate_obj()
+            self.nodes_visited.append(u)
             
-            
-            # u.get_lambda_interval()
-
-            """ if (u.upper_lambda < self.upper_lambda):
-                self.upper_lambda = u.upper_lambda
-            if (u.lower_lambda > self.lower_lambda):
-                self.lower_lambda = u.lower_lambda """
-
-
             self.show(f"u node: S0: {u.S0} | S1: {u.S1} | Pvl: {u.pvl}\n")
 
             # if the node is leaf
@@ -141,12 +134,12 @@ class BnBNormalAlgorythm:
             {"#" * 60}""")
 
         print()
-        return pv_opt, node_opt, self.node_counter
+        return pv_opt, node_opt, self.node_counter, self.nodes_visited
 
 
 if __name__ == "__main__":
     np.random.seed(42)
-    n = 14
+    n = 8
     A = np.random.randint(-10, 10, (n, n))
     y = np.random.randint(-10, 10, (n, 1))
     
@@ -161,21 +154,14 @@ if __name__ == "__main__":
 
     solver = BnBNormalAlgorythm(y, A, lambda0=lambda_0, M=M0)
 
-    pv, node, num_nodes = solver.solve(verbose=False)
+    pv, node_opt, num_nodes = solver.solve(verbose=False)
 
     print("Solution Node")
     # remember to count node 0
     print(f"Nodes visited {num_nodes}/{2**(n) + 1}")
-    print(node)
+    print(node_opt)
     
-    print(node.x)
+    print(node_opt.x)
 
-    #print("Getting lambda intervals")
-    #print(solver.lower_lambda, solver.upper_lambda)
-
-    """ S = list(range(n))
-    S0 = []
-    S1 = []
-    node = Node(n, S0, S1, S, A, y, lambda_0, M0)
-    node.calculate_obj()
-    node.get_lambda_interval() """
+    print("Getting lambda intervals")
+    node_opt.get_lambda_interval(verbose = True)
