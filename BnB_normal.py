@@ -78,11 +78,13 @@ class BnBNormalAlgorythm:
         def checking_node(name, v, pv_opt1, node_opt1):
 
             v.calculate_obj()
-            self.show(f"{name} pvl:", v.pvl)
+            self.show(f"{name} pvl:", round(v.pvl, 3))
             if not pv_opt1 <= v.pvl:
                 q.put(v)
-                self.show(f"{name} pu:", v.pu)
+                self.show(f"{name} pu:", round(v.pu, 3))
+                ex_node = node_opt1
                 pv_opt1, node_opt1 = self.check_bound(node_opt1, v)
+                self.show(f"Change node to {pv_opt1}\n" if ex_node != pv_opt1 else "", end="")
             return pv_opt1, node_opt1
 
         while not q.empty():
@@ -100,6 +102,7 @@ class BnBNormalAlgorythm:
             self.nodes_visited.append(u)
             
             self.show(f"u node: S0: {u.S0} | S1: {u.S1} | Pvl: {u.pvl}\n")
+            self.show(f"Pv opt: {round(pv_opt, 3)}")
 
             # if the node is leaf
             if u.level == self.n or len(u.S) == 0:

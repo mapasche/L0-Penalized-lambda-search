@@ -38,6 +38,9 @@ class Node:
     def get_lambda_interval(self, verbose = False):
         self.verbose = verbose
         
+        self.show(self)
+        self.show(self.x)
+        
         self.omega = float( 0.5 * np.linalg.norm(self.y - self.A @ self.x)**2 - \
             0.5 * np.linalg.norm(self.y)**2 +  \
             0.5 * np.linalg.norm(self.y-self.u)**2 )
@@ -54,6 +57,7 @@ class Node:
                 return str(self)
 
         # decreasing
+        self.show(self.u)
         test = sorted([Au(self.M*abs(self.A[:, i] @ self.u), i)
                        for i in self.S], reverse=True, key=lambda x: x.value)
         
@@ -62,6 +66,7 @@ class Node:
         def calc_bound_leaf_node ():
             constant1 = self.omega
             constant2 = float( len(self.S1) - np.count_nonzero(self.x) )
+            self.show("Calc bound leaf constant1:", constant1, "constant 2:",constant2)
             if constant2 != 0:
                 value =  constant1 / constant2
                 if 0 > constant2:
@@ -77,7 +82,7 @@ class Node:
                 return (possible_lower_bound, possible_upper_bound)
             else: 
                 if self.omega < 0:
-                    print("Omega:", self.omega)
+                    self.show("Omega:", self.omega)
                     raise Exception("Omega is negative when the refute at Omega > lambda * 0")  
                 value = (-np.inf, np.inf)
             return value
@@ -87,6 +92,7 @@ class Node:
             constant1 = float( self.omega + \
                 np.sum([test[i].value for i in range(j + 1)]) )
             constant2 = float( len(self.S1)-np.count_nonzero(self.x)+j+1 )
+            self.show(constant1)
             
             if constant2 != 0:
                 value = constant1 / constant2
@@ -221,9 +227,9 @@ class Node:
         return self.pvl <= other.pvl
 
     def __str__(self) -> str:
-        text = f"S0: {self.S0} | S1: {self.S1} | S: {self.S}\nPvl: {self.pvl}\n"
+        text = f"S0: {self.S0} | S1: {self.S1} | S: {self.S}\nPvl: {round(self.pvl, 3)}\n"
         return text
 
     def __repr__(self) -> str:
-        text = f"S0: {self.S0} | S1: {self.S1} | Pvl: {self.pvl}"
+        text = f"S0: {self.S0} | S1: {self.S1} | Pvl: {round(self.pvl, 3)}"
         return text

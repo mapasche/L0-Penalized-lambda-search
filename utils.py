@@ -3,7 +3,7 @@ import cvxpy as cp
 
 def evaluation_main(y, A, x, lambda0=1):
     n = y.shape[0]
-    value = 0.5 * np.linalg.norm(y - A @ x) ** 2 / n + \
+    value = 0.5 * np.linalg.norm(y - A @ x) ** 2 + \
         lambda0 * np.count_nonzero(x)
     return value
 
