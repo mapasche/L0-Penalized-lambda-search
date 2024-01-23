@@ -142,7 +142,7 @@ class BnBNormalAlgorythm:
 
 if __name__ == "__main__":
     np.random.seed(42)
-    n = 8
+    n = 10
     A = np.random.randint(-10, 10, (n, n))
     y = np.random.randint(-10, 10, (n, 1))
     
@@ -150,21 +150,18 @@ if __name__ == "__main__":
     df_A.to_csv(os.path.join('files', 'matrix.csv'), index=False, header=False)
     df_y = pd.DataFrame(y)
     df_y.to_csv(os.path.join('files', 'y.csv'), index=False, header=False)    
-
+    
+    np.random.seed(42)
+    n = 10
+    A = np.random.randint(-10, 10, (n, n))
+    y = np.random.randint(-10, 10, (n, 1))
 
     lambda_0 = 1
     M0 = 100
-
     solver = BnBNormalAlgorythm(y, A, lambda0=lambda_0, M=M0)
-
     pv, node_opt, num_nodes = solver.solve(verbose=False)
 
     print("Solution Node")
-    # remember to count node 0
     print(f"Nodes visited {num_nodes}/{2**(n) + 1}")
     print(node_opt)
-    
     print(node_opt.x)
-
-    print("Getting lambda intervals")
-    node_opt.get_lambda_interval(verbose = True)
