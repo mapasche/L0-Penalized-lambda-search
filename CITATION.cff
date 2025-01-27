@@ -1,0 +1,22 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: L0-Penalized-lambda-search
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Martin
+    family-names: Pasche
+    email: martin.pasche@student-cs.fr
+    affiliation: CentraleSupélec
+  - given-names: Guillaume
+    family-names: Di Fatta
+    email: guillaume.difatta@student-cs.fr
+    affiliation: CentraleSupélec
+repository-code: 'https://github.com/mapasche/L0-Penalized-lambda-search.git'
+keywords:
+  - l0-penalization
+  - Branch-and-Bound
